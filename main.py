@@ -15,4 +15,3 @@ def RunModel():
     downsample_type = 'None' # None, overall-50/50 ot patient-50/50
     repetition_option = '1' # 1, 5 or 10
 
-    
