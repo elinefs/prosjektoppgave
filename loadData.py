@@ -3,9 +3,17 @@ import numpy as np
 import SimpleITK as sitk
 from matplotlib import pyplot as plt
 import sklearn
+from sklearn.preprocessing import StandardScaler
 import dask.array as da
 ###########################################################################################################
 # Functions
+
+
+def get_array_from_nii_image(path):
+    image = sitk.ReadImage(path)
+    array = sitk.GetArrayFromImage(image)
+    array = array.flatten()
+    return array
 
 
 def select_cross_validator(method): # Kan legge til flere cross-validatorer her?
@@ -18,27 +26,52 @@ def select_cross_validator(method): # Kan legge til flere cross-validatorer her?
     return cross_validator
 
 
-def normalization(image): # Ikke implementert enda.
-    mean = 0
-    std = 1
+def normalization(data): # Ikke implementert enda.
+    if len(np.shape(data)) == 1:
+        data = np.expand_dims(data, axis=1)
+    scaler = StandardScaler(with_mean=False, with_std=False)
+    scaler.fit(data)
+    normData = scaler.transform(data)
+
+    return normData
 
 
-def radiologist(mask1, mask2,  method): # Bør sjekkes!!!!
+def radiologist(method, patientPath):
+
+    maskfile_an = "Mask_an.nii"
+    maskfile_shh = "Mask_shh.nii"
+
     if method == "an":
-        mask = mask1
+        maskPath = os.path.join(patientPath, maskfile_an)
+        mask = get_array_from_nii_image(maskPath)
+
     elif method == "shh":
-        mask = mask2
+        maskPath = os.path.join(patientPath, maskfile_shh)
+        mask = get_array_from_nii_image(maskPath)
+
     elif method == "intersection":
-        mask = np.zeros(len(mask1))
+        maskPath1 = os.path.join(patientPath, maskfile_an)
+        mask1 = get_array_from_nii_image(maskPath1)
+        maskPath2 = os.path.join(patientPath, maskfile_shh)
+        mask2 = get_array_from_nii_image(maskPath2)
+        mask = np.zeros(len(mask1), dtype=np.bool)
         for i in range(len(mask1)):
             mask[i] = mask1[i] or mask2[i]
+
     elif method == "union":
-        mask = np.zeros(len(mask1))
+        maskPath1 = os.path.join(patientPath, maskfile_an)
+        mask1 = get_array_from_nii_image(maskPath1)
+        maskPath2 = os.path.join(patientPath, maskfile_shh)
+        mask2 = get_array_from_nii_image(maskPath2)
+        mask = np.zeros(len(mask1), dtype=np.bool)
         for i in range(len(mask1)):
             mask[i] = mask1[i] and mask2[i]
+
     else:
         print("Unknown choice for mask.")
+
     return mask
+
 
 
 ###########################################################################################################
@@ -46,54 +79,67 @@ def radiologist(mask1, mask2,  method): # Bør sjekkes!!!!
 # Main program
 
 basepath = "/home/eline/Documents/Image_data/"
-patients = []
+patientPaths = []
+
 
 
 for entry in os.listdir(basepath):
     patientPath = os.path.join(basepath, entry)
     if os.path.isdir(patientPath):
-        patients.append(patientPath)
+        patientPaths.append(patientPath)
 
-print(patients)
+print(patientPaths)
 
-scans = ['T2', 'DWI_b6', 'DWI_b0']cd
+t2 = ["T2"]
+dwi = ["DWI_b0", "DWI_b1", "DWI_b2", "DWI_b3", "DWI_b4", "DWI_b5", "DWI_b6"]
+ffe = []
+t1t2sense = []
 
-maskfile = "Mask_an.nii"
+scantypes = [t2, dwi, ffe, t1t2sense]
+scans = []
+for type in scantypes:
+    if type:
+        scans.append(type)
+print(scans)
 
-numberOfPatients = len(patients)
-patientData = []
+
+maskchoice = "intersection" # an, shh, intersection or union
+
+numberOfPatients = len(patientPaths)
+patientIndex = np.zeros(numberOfPatients)
+dataMatrixList = []
 groundTruthList = []
 imageSizes = np.zeros(numberOfPatients)
 
 patientNo = 0
 
-for patient in patients:
+for patient in patientPaths:
 
-    maskPath = os.path.join(patient, maskfile)
-    mask = sitk.ReadImage(maskPath)
-    mask = sitk.GetArrayFromImage(mask)
-    mask = mask.flatten()
+    mask = radiologist(maskchoice, patient)
     groundTruthList.append(mask)
-
+    patientIndex[patientNo] = patientNo
     numberOfVoxels = len(mask)
     imageSizes[patientNo] = numberOfVoxels
-    imageData = np.zeros((numberOfVoxels, len(scans)), dtype=np.single)
+    patientData = []
 
-    scanIndex = 0
-    for scan in scans:
-        filename = scan + ".nii"
-        path = os.path.join(patient, filename)
-        image = sitk.ReadImage(path)
-        image = sitk.GetArrayFromImage(image)
-        image = image.flatten()
-        imageData[:, scanIndex] = image
-        scanIndex += 1
-    patientData.append(imageData)
+    for type in scans:
+        index = 0
+        scandata = np.zeros((numberOfVoxels, len(type)), dtype=np.single)
+        for scan in type:
+            filename = scan + ".nii"
+            path = os.path.join(patient, filename)
+            image = get_array_from_nii_image(path)
+            scandata[:, index] = image
+            index += 1
+        scandata = normalization(scandata)
+        patientData.append(scandata)
+
+    patientMatrix = np.concatenate(patientData, axis=1)
+    dataMatrixList.append(patientMatrix)
     patientNo += 1
     
-print(np.shape(patientData[1]))
-print(imageSizes)
-dataMatrix = da.concatenate(patientData, axis=0)
+
+dataMatrix = da.concatenate(dataMatrixList, axis=0)
 print(dataMatrix)
 groundTruth = da.concatenate(groundTruthList, axis=0)
 print(groundTruth)

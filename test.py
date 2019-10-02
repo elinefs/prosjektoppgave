@@ -22,3 +22,11 @@ for train_index, test_index in cv.split(data):
     X_train, X_test = data[train_index], data[test_index]
 
     print(X_train, X_test)
+matrix = np.zeros((len(data), 2))
+matrix[:,0] = data
+print(matrix)
+data = np.expand_dims(data, axis=1)
+print(np.shape(data))
+
+part = data[:,0]
+print(len(np.shape(part)))
