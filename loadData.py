@@ -26,7 +26,7 @@ def select_cross_validator(method): # Kan legge til flere cross-validatorer her?
     return cross_validator
 
 
-def normalization(data): # Ikke implementert enda.
+def normalization(data):
     if len(np.shape(data)) == 1:
         data = np.expand_dims(data, axis=1)
     scaler = StandardScaler(with_mean=False, with_std=False)
@@ -72,27 +72,27 @@ def radiologist(method, patientPath):
 
     return mask
 
+def GetPatients(directoryPath):
+    patientPaths = []
+    for entry in os.listdir(basepath):
+        patientPath = os.path.join(basepath, entry)
+        if os.path.isdir(patientPath):
+            patientPaths.append(patientPath)
+    return patientPaths
 
 
 ###########################################################################################################
 
 # Main program
 
-basepath = "/home/eline/Documents/Image_data/"
-patientPaths = []
-
-
-
-for entry in os.listdir(basepath):
-    patientPath = os.path.join(basepath, entry)
-    if os.path.isdir(patientPath):
-        patientPaths.append(patientPath)
+basepath = "/home/eline/OneDrive/__NiiFormat"
+patientPaths = GetPatients(basepath)
 
 print(patientPaths)
 
 t2 = ["T2"]
 dwi = ["DWI_b0", "DWI_b1", "DWI_b2", "DWI_b3", "DWI_b4", "DWI_b5", "DWI_b6"]
-ffe = []
+ffe = ["FFE_e0"]
 t1t2sense = []
 
 scantypes = [t2, dwi, ffe, t1t2sense]
