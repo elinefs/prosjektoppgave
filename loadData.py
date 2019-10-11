@@ -7,6 +7,17 @@ from sklearn.model_selection import LeaveOneOut
 from sklearn.model_selection import KFold
 from sklearn.preprocessing import StandardScaler
 import dask.array as da
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
+
+from dask_ml.wrappers import Incremental
+'''
+from dask.distributed import Client, LocalCluster
+client = Client(n_workers=1, threads_per_worker=1, processes=False,
+                memory_limit='25GB', scheduler_port=0,
+                silence_logs=False, diagnostics_port=0)
+client
+'''
+import time
 ###########################################################################################################
 # Functions
 
@@ -46,7 +57,7 @@ def normalization(data):
     """
     if len(np.shape(data)) == 1:
         data = np.expand_dims(data, axis=1)
-    scaler = StandardScaler(with_mean=False, with_std=False)
+    scaler = StandardScaler(with_mean=True, with_std=True)
     scaler.fit(data)
     normData = scaler.transform(data)
 
@@ -120,15 +131,13 @@ def buildDataset(patientPaths, scans, maskchoice, patientIndex):
     :param patientIndex: empty matrix to store start and stop index for each patient.
     :return: return a matrix with all the image data and a list with the ground truth.
     """
-    dataMatrixList = []
-    groundTruthList = []
+    dataDict = {}
+    groundTruthDict = {}
     for patientNo, patient in enumerate(patientPaths):
 
         mask = radiologist(maskchoice, patient)
-        groundTruthList.append(mask)
+        groundTruthDict[patientNo] = mask
         numberOfVoxels = len(mask)
-        patientIndex[patientNo][0] = patientIndex[patientNo-1][1]
-        patientIndex[patientNo][1] = patientIndex[patientNo][0] + numberOfVoxels
         patientData = []
 
         for type in scans:
@@ -142,20 +151,26 @@ def buildDataset(patientPaths, scans, maskchoice, patientIndex):
             patientData.append(scandata)
 
         patientMatrix = np.concatenate(patientData, axis=1)
-        dataMatrixList.append(patientMatrix)
+        dataDict[patientNo] = patientMatrix
 
-    dataMatrix = da.concatenate(dataMatrixList, axis=0)
-    groundTruth = da.concatenate(groundTruthList, axis=0)
-
-    return dataMatrix, groundTruth
+    return dataDict, groundTruthDict
 
 
-def get_data_for_training(imageSizes, dataMatrix, groundTruth, train_index):
-    return
+def get_data_for_training(dataDict, groundTruthDict, indexList):
+    dataList = []
+    groundtruthList = []
+    for index in indexList:
+        dataList.append(dataDict[index])
+        groundtruthList.append(groundTruthDict[index])
+    data = da.concatenate(dataList, axis=0)
+    groundTruth = da.concatenate(groundtruthList, axis=0)
+    return data, groundTruth
 
 ###########################################################################################################
 
 # Main program
+
+t0 = time.time()
 
 basepath = "/home/eline/OneDrive/__NiiFormat"
 patientPaths = GetPatients(basepath)
@@ -163,8 +178,8 @@ patientPaths = GetPatients(basepath)
 print(patientPaths)
 
 t2 = ["T2"]
-dwi = ["DWI_b0", "DWI_b1", "DWI_b2", "DWI_b3", "DWI_b4", "DWI_b5", "DWI_b6"]
-ffe = ["FFE_e0"]
+dwi = ["DWI_b6"]
+ffe = []
 t1t2sense = []
 
 scantypes = [t2, dwi, ffe, t1t2sense]
@@ -178,23 +193,31 @@ print(scans)
 maskchoice = "intersection" # an, shh, intersection or union
 
 numberOfPatients = len(patientPaths)
-#patientNumbers = np.linspace(0, numberOfPatients, numberOfPatients, endpoint=False, dtype=int)
-patientIndex = np.zeros((numberOfPatients,2))
+patientNumbers = np.linspace(0, numberOfPatients, numberOfPatients, endpoint=False, dtype=int)
 
-dataMatrix, groundTruth = buildDataset(patientPaths, scans, maskchoice, patientIndex)
-print(dataMatrix)
-print(groundTruth)
-print(patientIndex)
+
+dataDict, groundTruthDict = buildDataset(patientPaths, scans, maskchoice, patientNumbers)
+
 
 crossvalidator = select_cross_validator("K-fold")
-for train_index, test_index in crossvalidator.split(patientIndex):
-    print("TRAIN:", train_index, "TEST:", test_index)
 
 
 
+for train_index, test_index in crossvalidator.split(patientNumbers):
 
-'''
-testarray = da.concatenate([dataMatrix[0:2220400][:], dataMatrix[4002256:][:]], axis=0)
-print(testarray)
-'''
+    trainingX, trainingY = get_data_for_training(dataDict, groundTruthDict, train_index)
+    testX, testY = get_data_for_training(dataDict, groundTruthDict, test_index)
+
+    est = sklearn.linear_model.SGDClassifier()
+    clf = Incremental(est, scoring='accuracy')
+    clf.fit(trainingX, trainingY, classes=[0, 1])
+    data = clf.predict(testX)
+    print(clf.score(testX, testY))
+
+
+
+t1 = time.time()
+print('runtime: ' + str(t1-t0))
+
+
 
