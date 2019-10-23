@@ -20,7 +20,6 @@ def buildDataset(patientPaths, scans, maskchoice):
     for patientNo, patient in enumerate(patientPaths):
 
         mask = options.radiologist(maskchoice, patient)
-        groundTruthDict[patientNo] = mask
         numberOfVoxels = len(mask)
         patientData = []
 
@@ -35,7 +34,7 @@ def buildDataset(patientPaths, scans, maskchoice):
             patientData.append(scandata)
 
         patientMatrix = np.concatenate(patientData, axis=1)
-        dataDict[patientNo] = patientMatrix
+        dataDict[patientNo], groundTruthDict[patientNo] = processData.downsample50_50(patientMatrix, mask)
 
     return dataDict, groundTruthDict
 
