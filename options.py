@@ -7,16 +7,17 @@ from processData import get_array_from_nii_image
 
 ########################################################################################################################
 
-def select_cross_validator(method):
+def select_cross_validator(method, splits=5):
     """
     A function to choose the wanted method for cross-validation.
     :param method: a string with the name of the method.
+    :param splits: optional, an int with number of splits is the method is K-fold.
     :return: the cross-validation method form sklearn.
     """
     if method == "leave-One-Out":
         cross_validator = LeaveOneOut()
     elif method == "K-fold":
-        cross_validator = KFold(n_splits=5)
+        cross_validator = KFold(n_splits=splits)
     else:
         raise Exception("Cross-validator unknown or not implemented.")
     return cross_validator
