@@ -17,6 +17,7 @@ def buildDataset(patientPaths, scans, maskchoice):
     """
     dataDict = {}
     groundTruthDict = {}
+    imsizes = {}
     for patientNo, patient in enumerate(patientPaths):
 
         mask = options.radiologist(maskchoice, patient)
@@ -28,20 +29,24 @@ def buildDataset(patientPaths, scans, maskchoice):
             for index, scan in enumerate(type):
                 filename = scan + ".nii"
                 path = os.path.join(patient, filename)
-                image = processData.get_array_from_nii_image(path)
+                image, size = processData.get_array_from_nii_image(path)
                 scandata[:, index] = image
+                if patientNo not in imsizes.keys():
+                    imsizes[patientNo] = size
             scandata = processData.normalization(scandata)
             patientData.append(scandata)
 
         patientMatrix = np.concatenate(patientData, axis=1)
-        dataDict[patientNo], groundTruthDict[patientNo] = processData.downsample50_50(patientMatrix, mask)
 
-    return dataDict, groundTruthDict
+        dataDict[patientNo] = patientMatrix
+        groundTruthDict[patientNo] = mask
+
+    return dataDict, groundTruthDict, imsizes
 
 
 def get_data_for_training(dataDict, groundTruthDict, indexList):
     '''
-    A function to combine the data used to train or test the model in a dask array.
+    A function to combine the data used to train the model in a dask array.
     :param dataDict: a dictionary with the data.
     :param groundTruthDict: a dictionary with the ground truth.
     :param indexList: indexes (keys in dictionary) that should be included in the dask array.
@@ -50,8 +55,36 @@ def get_data_for_training(dataDict, groundTruthDict, indexList):
     dataList = []
     groundtruthList = []
     for index in indexList:
-        dataList.append(dataDict[index])
-        groundtruthList.append(groundTruthDict[index])
+        indexData, indexTruth = dataDict[index], groundTruthDict[index]
+
+        remove = np.where(~indexData.all(axis=1))[0]
+        indexData = np.delete(indexData, remove, 0)
+        indexTruth = np.delete(indexTruth, remove)
+
+        indexData, indexTruth = processData.downsample50_50(indexData, indexTruth)
+
+        dataList.append(indexData)
+        groundtruthList.append(indexTruth)
+
+    data = da.concatenate(dataList, axis=0)
+    groundTruth = da.concatenate(groundtruthList, axis=0)
+    return data, groundTruth
+
+
+def get_data_for_test(dataDict, groundTruthDict, indexList):
+    '''
+    A function to combine the data used to test the model in a dask array.
+    :param dataDict: a dictionary with the data.
+    :param groundTruthDict: a dictionary with the ground truth.
+    :param indexList: indexes (keys in dictionary) that should be included in the dask array.
+    :return: two dask arrays; one with data and one with ground truth.
+    '''
+    dataList = []
+    groundtruthList = []
+    for index in indexList:
+        indexData, indexTruth = dataDict[index], groundTruthDict[index]
+        dataList.append(indexData)
+        groundtruthList.append(indexTruth)
     data = da.concatenate(dataList, axis=0)
     groundTruth = da.concatenate(groundtruthList, axis=0)
     return data, groundTruth

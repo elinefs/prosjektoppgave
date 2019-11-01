@@ -36,26 +36,26 @@ def radiologist(method, patientPath):
 
     if method == "an":
         maskPath = os.path.join(patientPath, maskfile_an)
-        mask = get_array_from_nii_image(maskPath)
+        mask = get_array_from_nii_image(maskPath)[0]
 
     elif method == "shh":
         maskPath = os.path.join(patientPath, maskfile_shh)
-        mask = get_array_from_nii_image(maskPath)
+        mask = get_array_from_nii_image(maskPath)[0]
 
     elif method == "intersection":
         maskPath1 = os.path.join(patientPath, maskfile_an)
-        mask1 = get_array_from_nii_image(maskPath1)
+        mask1 = get_array_from_nii_image(maskPath1)[0]
         maskPath2 = os.path.join(patientPath, maskfile_shh)
-        mask2 = get_array_from_nii_image(maskPath2)
+        mask2 = get_array_from_nii_image(maskPath2)[0]
         mask = np.zeros(len(mask1), dtype=np.bool)
         for i in range(len(mask1)):
             mask[i] = mask1[i] and mask2[i]
 
     elif method == "union":
         maskPath1 = os.path.join(patientPath, maskfile_an)
-        mask1 = get_array_from_nii_image(maskPath1)
+        mask1 = get_array_from_nii_image(maskPath1)[0]
         maskPath2 = os.path.join(patientPath, maskfile_shh)
-        mask2 = get_array_from_nii_image(maskPath2)
+        mask2 = get_array_from_nii_image(maskPath2)[0]
         mask = np.zeros(len(mask1), dtype=np.bool)
         for i in range(len(mask1)):
             mask[i] = mask1[i] or mask2[i]

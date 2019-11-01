@@ -37,3 +37,8 @@ x = np.linspace(0, 10, 10, endpoint=False, dtype=int)
 print(x)
 
 print(sklearn.base.is_classifier(sklearn.linear_model.SGDClassifier()))
+
+array = np.array(((1,2,3,4,5), (2,3,0,3,2), (5,4,3,2,1)))
+remove =  np.where(~array.all(axis=1))[0]
+array = np.delete(array, remove, 0)
+print(array)

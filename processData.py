@@ -12,8 +12,9 @@ def get_array_from_nii_image(path):
     """
     image = sitk.ReadImage(path)
     array = sitk.GetArrayFromImage(image)
+    imsize = np.shape(array)
     array = array.flatten()
-    return array
+    return array, imsize
 
 def normalization(data):
     """
