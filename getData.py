@@ -9,10 +9,12 @@ def GetPatients(directoryPath):
     :return: a list with the paths to the patients.
     """
     patientPaths = []
+    patientNames = []
     for entry in os.listdir(directoryPath):
         patientPath = os.path.join(directoryPath, entry)
         if os.path.isdir(patientPath):
             patientPaths.append(patientPath)
-    return patientPaths
+            patientNames.append(entry)
+    return patientPaths, patientNames
 
 

@@ -11,7 +11,6 @@ def plot_confusion_matrix(cm, classes, normalize=False, title="Overall confusion
     :param classes: a list with names (strings) of the different classes
     :param normalize: optional, set to True if normalization of the confusion matrix is wanted.
     :param title: optional, a string with the title of the plot.
-    :return: a plot with the confusion matrix.
     """
 
     if normalize:
@@ -31,45 +30,22 @@ def plot_confusion_matrix(cm, classes, normalize=False, title="Overall confusion
         for j in range(cm.shape[1]):
             ax.text(j, i, format(cm[i, j], fmt), ha="center", va="center", color="white" if cm[i, j] > thresh else "black")
     fig.tight_layout()
-    return ax
+    plt.show()
 
 
-def plot_probability_map(patientprob, slice, imsize, title):
-    '''
+def plot_dice_scores(dice):
+    """
+    A function to plot the DICE scores.
+    :param dice: a 2D matrix containing patient names and corresponding DICE scores.
+    """
+    score = []
+    patient = []
+    for element in dice:
+        score.append(element[1])
+        patient.append(element[0])
 
-    :param patientprob:
-    :param slice:
-    :param imsize:
-    :param title:
-    :return:
-    '''
-    startIndex = slice * imsize[0] * imsize[1]
-    stopIndex = startIndex + (imsize[0] * imsize[1])
-
-    prob = np.reshape(patientprob[startIndex:stopIndex, 1], (imsize[0], imsize[1]))
-
-    fig, ax = plt.subplots()
-    im = ax.imshow(prob, interpolation='nearest', cmap='hot')
-    ax.figure.colorbar(im, ax=ax)
-    ax.set(title=title)
-    return ax
-
-
-def plot_binary_mask(predData, slice, imsize, title):
-    '''
-
-    :param predData:
-    :param slice:
-    :param imsize:
-    :param title:
-    :return:
-    '''
-    startIndex = slice * imsize[0] * imsize[1]
-    stopIndex = startIndex + (imsize[0] * imsize[1])
-
-    pred = np.reshape(predData[startIndex:stopIndex], (imsize[0], imsize[1]))
-
-    fig, ax = plt.subplots()
-    ax.imshow(pred)
-    ax.set(title=title)
-    return ax
+    plt.plot(patient, score, 'o')
+    plt.xticks(rotation=45)
+    plt.xlabel('Patient')
+    plt.ylabel('DICE score')
+    plt.show()
