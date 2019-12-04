@@ -34,10 +34,22 @@ def buildDataset(patientPaths, patientNames, scans, maskchoice):
                 scandata[:, index] = image
                 if key not in imsizes.keys():
                     imsizes[key] = size
-            scandata = processData.normalization(scandata)
             patientData.append(scandata)
 
         patientMatrix = np.concatenate(patientData, axis=1)
+
+        # Set rows with zeros to NaN values.
+        nanValues = np.where(~patientMatrix.all(axis=1))[0]
+        for index in nanValues:
+            patientMatrix[index, :] = np.nan
+
+        # Normalize the data within the individual scan types.
+        column = 0
+        for type in scans:
+            numberOfScans = len(type)
+            if numberOfScans > 0:
+                patientMatrix[:, column:column+numberOfScans] = processData.normalization(patientMatrix[:, column:column+numberOfScans])
+                column += numberOfScans
 
         dataDict[key] = patientMatrix
         groundTruthDict[key] = mask
@@ -58,8 +70,8 @@ def get_data_for_training(dataDict, groundTruthDict, indexList):
     for index in indexList:
         indexData, indexTruth = dataDict[index], groundTruthDict[index]
 
-        # Remove rows where at least one value is zeros.
-        remove = np.where(~indexData.all(axis=1))[0]
+        # Remove rows with NaN.
+        remove = np.where(np.isnan(indexData))[0]
         indexData = np.delete(indexData, remove, 0)
         indexTruth = np.delete(indexTruth, remove)
 
@@ -88,12 +100,15 @@ def get_data_for_test(dataDict, groundTruthDict, indexList, zeroIndexDict):
     groundtruthList = []
     for index in indexList:
         indexData, indexTruth = dataDict[index], groundTruthDict[index]
+
+        # Store the indexes of the rows with NaN.
+        zeros = np.where(np.isnan(indexData))[0]
+        zeroIndexDict[index] = zeros
+        # Set the NaN rows to zero.
+        indexData = np.nan_to_num(indexData, nan=0)
+
         dataList.append(indexData)
         groundtruthList.append(indexTruth)
-
-        # Store the indexes of the rows where at least one value is zero.
-        zeros = np.where(~indexData.all(axis=1))[0]
-        zeroIndexDict[index] = zeros
 
     # Join to a Dask array.
     data = da.concatenate(dataList, axis=0)
