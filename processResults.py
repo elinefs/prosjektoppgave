@@ -1,5 +1,14 @@
 import numpy as np
 import SimpleITK as sitk
+from skimage import morphology
+
+
+def remove_small_areas(array, imsize):
+    mask = np.reshape(array, imsize)
+    for slice in mask:
+        morphology.remove_small_objects(slice, 50, in_place=True)
+    mask = mask.flatten()
+    return mask
 
 
 def calculate_dice(confusionMatrix):
