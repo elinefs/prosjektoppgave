@@ -2,7 +2,6 @@ from sklearn.metrics import confusion_matrix
 import matplotlib.pyplot as plt
 import numpy as np
 
-########################################################################################################################
 
 def plot_confusion_matrix(cm, classes, normalize=False, title="Overall confusion matrix"):
     """
@@ -39,13 +38,13 @@ def plot_dice_scores(dice):
     :param dice: a 2D matrix containing patient names and corresponding DICE scores.
     """
     score = []
-    patient = []
+    #patient = []
     for element in dice:
         score.append(element[1])
-        patient.append(element[0])
+        #patient.append(element[0])
 
-    plt.plot(patient, score, 'o')
-    plt.xticks(rotation=45)
+    plt.plot(score, 'o')
+    #plt.xticks(rotation=90)
     plt.xlabel('Patient')
-    plt.ylabel('DICE score')
+    plt.ylabel('DSC')
     plt.show()

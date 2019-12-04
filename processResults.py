@@ -1,7 +1,6 @@
 import numpy as np
 import SimpleITK as sitk
 
-########################################################################################################################
 
 def calculate_dice(confusionMatrix):
     """
@@ -21,7 +20,7 @@ def array_to_image(array, imsize):
     :return: an image.
     """
     im = np.reshape(array, imsize)
-    im = im.astype(float)
+    im = im.astype(int)
     im = sitk.GetImageFromArray(im)
     return im
 

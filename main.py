@@ -12,19 +12,18 @@ import getData
 import buildData
 import plot
 import processResults
-########################################################################################################################
 
 
 def main():
     t0 = time.time()
 
-    basepath = "/home/eline/OneDrive/__NiiFormat" # Path to the patient folders.
+    basepath = "/home/eline/OneDrive/__NiiFormat1" # Path to the patient folders.
     patientPaths, patientIDs = getData.GetPatients(basepath)
     patientIDs = np.array(patientIDs)
 
     # Choose which scans to include.
     t2 = ["T2"]
-    dwi = ["DWI_b0", "DWI_b1", "DWI_b2", "DWI_b3", "DWI_b4", "DWI_b5", "DWI_b6"]
+    dwi = ["DWI_b00", "DWI_b01", "DWI_b02", "DWI_b03", "DWI_b04", "DWI_b05", "DWI_b06"]
     ffe = []
     t1t2sense = []
 
@@ -60,10 +59,10 @@ def main():
         testX, testY = buildData.get_data_for_test(dataDict, groundTruthDict, patientIDs[test_index], zeroIndex)
 
         # Rechunk to be sure to not run into memory issues later.
-        trainingX = trainingX.rechunk((100000, -1))
-        trainingY = trainingY.rechunk((100000, -1))
-        testX = testX.rechunk((100000, -1))
-        testY = testY.rechunk((100000, -1))
+        trainingX = trainingX.rechunk((1000000, -1))
+        trainingY = trainingY.rechunk((1000000, -1))
+        testX = testX.rechunk((1000000, -1))
+        testY = testY.rechunk((1000000, -1))
 
         # Using incremental learning (out of core learning) because of the large amount of data.
         estimator = sklearn.linear_model.SGDClassifier() # Estimator have to have partial_fit API implemented.
@@ -104,24 +103,32 @@ def main():
             # Make a plot of the confusion matrix for the patient.
             # plot.plot_confusion_matrix(confusionMatrix, classes=['Normal', 'Tumour'], normalize=True, title="Confusion matrix, patient "+str(patientID))
 
-    # Save the DICE scores in a text file.
-    processResults.save_dice_scores(dice, "diceScores")
-    # Make a plot with the DICE scores.
-    plot.plot_dice_scores(dice)
-
-    # Overall confusion matrix
-    totalPred = da.concatenate(totalPred, axis=0)
-    totalTruth = da.concatenate(totalTruth, axis=0)
-    confusionMatrix = confusion_matrix(totalTruth.compute(), totalPred.compute())
-
-    plot.plot_confusion_matrix(confusionMatrix, classes=['Normal', 'Tumour'], normalize=True)
-    print(processResults.calculate_dice(confusionMatrix))
-
     t1 = time.time()
     print('loadtime: ' + str(loadtime-t0))
     print('traintime: ' + str(t1-loadtime))
     print('runtime: ' + str(t1-t0))
 
+    # Save the DICE scores in a text file.
+    processResults.save_dice_scores(dice, "diceScores")
+    # Make a plot with the DICE scores.
+    plot.plot_dice_scores(dice)
+
+    '''
+    # Overall confusion matrix
+    totalPred = da.concatenate(totalPred, axis=0)
+    totalTruth = da.concatenate(totalTruth, axis=0)
+    confusionMatrix = confusion_matrix(totalTruth.compute(), totalPred.compute())
+
+    plot.plot_confusion_matrix(confusionMatrix, classes=['Normal', 'Tumour'], normalize=False)
+    print(processResults.calculate_dice(confusionMatrix))
+    '''
+
+    sum=0
+    n=0
+    for i in dice:
+        sum+=i[1]
+        n+=1
+    print(sum/n)
 
 if __name__ == "__main__":
     main()

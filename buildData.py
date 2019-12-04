@@ -5,7 +5,6 @@ import dask.array as da
 import options
 import processData
 
-########################################################################################################################
 
 def buildDataset(patientPaths, patientNames, scans, maskchoice):
     """

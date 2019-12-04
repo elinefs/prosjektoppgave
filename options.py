@@ -5,7 +5,6 @@ from sklearn.model_selection import KFold
 
 from processData import get_array_from_nii_image
 
-########################################################################################################################
 
 def select_cross_validator(method, splits=5):
     """
