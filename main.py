@@ -41,7 +41,7 @@ def main():
     dataDict, groundTruthDict, imsizes = buildData.buildDataset(patientPaths, patientIDs, scans, maskchoice)
 
     # Choose cross-validator.
-    crossvalidator = options.select_cross_validator("K-fold", 5)
+    crossvalidator = options.select_cross_validator("K-fold")
 
     loadtime = time.time()
 
@@ -57,12 +57,6 @@ def main():
         # First splitting the data and building dask arrays.
         trainingX, trainingY = buildData.get_data_for_training(dataDict, groundTruthDict, patientIDs[train_index])
         testX, testY = buildData.get_data_for_test(dataDict, groundTruthDict, patientIDs[test_index], zeroIndex)
-
-        # Rechunk to be sure to not run into memory issues later.
-        trainingX = trainingX.rechunk((1000000, -1))
-        trainingY = trainingY.rechunk((1000000, -1))
-        testX = testX.rechunk((1000000, -1))
-        testY = testY.rechunk((1000000, -1))
 
         # Using incremental learning (out of core learning) because of the large amount of data.
         estimator = sklearn.linear_model.SGDClassifier() # Estimator have to have partial_fit API implemented.
@@ -84,6 +78,8 @@ def main():
             # Set rows which contained at least one zero as background (0).
             for element in zeroIndex[patientID]:
                 pred[element] = 0
+
+            pred = processResults.remove_small_areas(pred, imsizes[patientID])
 
             # Calculate the confusion matrix.
             confusionMatrix = confusion_matrix(truth, pred)
