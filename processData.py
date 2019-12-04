@@ -2,7 +2,6 @@ import numpy as np
 import SimpleITK as sitk
 from sklearn.preprocessing import StandardScaler
 
-########################################################################################################################
 
 def get_array_from_nii_image(path):
     """
@@ -41,6 +40,7 @@ def downsample50_50(patientdata, patientGroundTruth):
     normalIndex = np.where(patientGroundTruth == False)[0]
     number = len(tumorIndex)
 
+    np.random.seed(0)
     keepIndex = np.random.choice(normalIndex, number, replace=False)
 
     downsamplePatientData = np.concatenate((patientdata[tumorIndex], patientdata[keepIndex]), axis=0)
