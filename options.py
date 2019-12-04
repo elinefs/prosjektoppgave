@@ -36,10 +36,12 @@ def radiologist(method, patientPath):
     if method == "an":
         maskPath = os.path.join(patientPath, maskfile_an)
         mask = get_array_from_nii_image(maskPath)[0]
+        mask = mask.astype(np.bool)
 
     elif method == "shh":
         maskPath = os.path.join(patientPath, maskfile_shh)
         mask = get_array_from_nii_image(maskPath)[0]
+        mask = mask.astype(np.bool)
 
     elif method == "intersection":
         maskPath1 = os.path.join(patientPath, maskfile_an)
