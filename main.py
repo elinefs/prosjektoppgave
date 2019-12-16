@@ -1,8 +1,6 @@
 import numpy as np
-import matplotlib.pyplot as plt
 import sklearn.linear_model
 from sklearn.metrics import confusion_matrix
-import dask.array as da
 from dask_ml.wrappers import Incremental
 import SimpleITK as sitk
 import time
@@ -10,7 +8,6 @@ import time
 import options
 import getData
 import buildData
-import plot
 import processResults
 
 
@@ -35,18 +32,15 @@ def main():
 
 
     # Choose the mask/ground truth.
-    maskchoice = "intersection" # an, shh, intersection or union
+    maskchoice = "union" # an, shh, intersection or union
 
     # Creating dictionaries to store patient image data and the masks.
     dataDict, groundTruthDict, imsizes = buildData.buildDataset(patientPaths, patientIDs, scans, maskchoice)
 
     # Choose cross-validator.
-    crossvalidator = options.select_cross_validator("K-fold")
+    crossvalidator = options.select_cross_validator("leave-One-Out") # K-fold or leave-One-Out
 
     loadtime = time.time()
-
-    totalPred = []
-    totalTruth = []
 
     zeroIndex = {}
 
@@ -64,9 +58,6 @@ def main():
         clf.fit(trainingX, trainingY, classes=[True, False])
         data = clf.predict(testX)
 
-        totalPred.append(data)
-        totalTruth.append(testY)
-
         # Per patient predictions.
         index = 0
         for patientID in patientIDs[test_index]:
@@ -79,7 +70,9 @@ def main():
             for element in zeroIndex[patientID]:
                 pred[element] = 0
 
-            pred = processResults.remove_small_areas(pred, imsizes[patientID])
+            # Remove small areas/volumes from the predicted mask.
+            pred = processResults.remove_small_areas2D(pred, imsizes[patientID])
+            #pred = processResults.remove_small_areas3D(pred, imsizes[patientID])
 
             # Calculate the confusion matrix.
             confusionMatrix = confusion_matrix(truth, pred)
@@ -96,8 +89,6 @@ def main():
             # Increase index to the starting index of the next patient.
             index += size
 
-            # Make a plot of the confusion matrix for the patient.
-            # plot.plot_confusion_matrix(confusionMatrix, classes=['Normal', 'Tumour'], normalize=True, title="Confusion matrix, patient "+str(patientID))
 
     t1 = time.time()
     print('loadtime: ' + str(loadtime-t0))
@@ -106,19 +97,8 @@ def main():
 
     # Save the DICE scores in a text file.
     processResults.save_dice_scores(dice, "diceScores")
-    # Make a plot with the DICE scores.
-    plot.plot_dice_scores(dice)
 
-    '''
-    # Overall confusion matrix
-    totalPred = da.concatenate(totalPred, axis=0)
-    totalTruth = da.concatenate(totalTruth, axis=0)
-    confusionMatrix = confusion_matrix(totalTruth.compute(), totalPred.compute())
-
-    plot.plot_confusion_matrix(confusionMatrix, classes=['Normal', 'Tumour'], normalize=False)
-    print(processResults.calculate_dice(confusionMatrix))
-    '''
-
+    # Calculate the mean DSC value.
     sum=0
     n=0
     for i in dice:

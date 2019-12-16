@@ -3,10 +3,29 @@ import SimpleITK as sitk
 from skimage import morphology
 
 
-def remove_small_areas(array, imsize):
+def remove_small_areas2D(array, imsize):
+    """
+    A function to remove areas less than 100 voxels from the predicted mask.
+    :param array: array with the predicted mask.
+    :param imsize: array with the corresponding image size.
+    :return: array with the processed mask.
+    """
     mask = np.reshape(array, imsize)
     for slice in mask:
-        morphology.remove_small_objects(slice, 50, in_place=True)
+        morphology.remove_small_objects(slice, 100, in_place=True)
+    mask = mask.flatten()
+    return mask
+
+
+def remove_small_areas3D(array, imsize):
+    """
+    A function to remove volumes less than 1000 voxels from the predicted mask.
+    :param array: array with the predicted mask.
+    :param imsize: array with the corresponding image size.
+    :return: array with the processed mask.
+    """
+    mask = np.reshape(array, imsize)
+    morphology.remove_small_objects(mask, 1000, in_place=True)
     mask = mask.flatten()
     return mask
 
